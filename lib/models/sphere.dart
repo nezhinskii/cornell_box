@@ -1,0 +1,79 @@
+import 'dart:math';
+import 'dart:ui';
+
+import 'package:cornell_box/models/camera.dart';
+import 'package:cornell_box/models/intersection.dart';
+import 'package:cornell_box/models/matrix.dart';
+import 'package:cornell_box/models/point.dart';
+import 'package:cornell_box/models/interfaces.dart';
+import 'package:cornell_box/models/ray.dart';
+
+class Sphere implements Object{
+  final Point3D center;
+  final double radius;
+  final Color color;
+  @override
+  final double specularStrength;
+  @override
+  final double shininess;
+  @override
+  final double reflectivity;
+  @override
+  final double transparency;
+  @override
+  final double refractiveIndex ;
+
+  Sphere({
+    required this.color,
+    required this.radius,
+    required this.center,
+    this.shininess = 8,
+    this.specularStrength = 0.5,
+    this.reflectivity = 0.0,
+    this.transparency = 0.0,
+    this.refractiveIndex = 1.03
+  });
+
+  @override
+  Point3D get objectColor => Point3D(
+    color.red / 255,
+    color.green / 255,
+    color.blue / 255,
+    1.0
+  );
+
+  @override
+  Intersection? intersect({
+    required Ray ray,
+    required Camera camera,
+    required Matrix view,
+    required Matrix projection
+  }) {
+    Point3D oc = ray.start - center;
+    double a = ray.direction.dot(ray.direction);
+    double b = 2.0 * oc.dot(ray.direction);
+    double c = oc.dot(oc) - radius * radius;
+    double discriminant = b * b - 4 * a * c;
+
+    if (discriminant < 0) {
+      return null;
+    } else {
+      double t1 = (-b - sqrt(discriminant)) / (2 * a);
+      double t2 = (-b + sqrt(discriminant)) / (2 * a);
+      double t = t1 < t2 && t1 >= 0 ? t1 : t2;
+      final intersection = ray.start + ray.direction * t;
+      final projectedIntersection = Point3D.fromVector(Matrix.point(Point3D.fromVector(Matrix.point(intersection) * view)) * projection);
+      final normal = (intersection - center).normalized();
+      if (t >= 0) {
+        return Intersection(
+          inside: ray.direction.dot(normal) > 0,
+          normal: normal,
+          hit: intersection,
+          z: projectedIntersection.z
+        );
+      } else {
+        return null;
+      }
+    }
+  }
+}
