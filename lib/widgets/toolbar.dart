@@ -1,3 +1,5 @@
+import 'package:cornell_box/models/light.dart';
+import 'package:cornell_box/models/point.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cornell_box/bloc/main_bloc.dart';
@@ -15,6 +17,9 @@ class _ToolBarState extends State<ToolBar> {
   bool _cubeReflective = true;
   bool _sphereTransparent = true;
   bool _cubeTransparent = false;
+  bool _softShadows = false;
+  bool _secondLight = false;
+  final _lightController = TextEditingController(text: '-0.96;0;1.4');
 
   void _radioOnChanged(int? value){
     if (value != null){
@@ -162,11 +167,73 @@ class _ToolBarState extends State<ToolBar> {
                 ],
               ),
             ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Checkbox(
+                  value: _secondLight,
+                  onChanged: (value) {
+                    if (value != null){
+                      setState(() {
+                        _secondLight = value;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(width: 10,),
+                Text('Второй источник света'),
+              ],
+            ),
+            Center(
+              child: SizedBox(
+                height: 50,
+                width: 150,
+                child: TextField(
+                  controller: _lightController,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20,),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Checkbox(
+                  value: _softShadows,
+                  onChanged: (value) {
+                    if (value != null){
+                      setState(() {
+                        _softShadows = value;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(width: 10,),
+                Text('Мягкие тени'),
+              ],
+            ),
+            const SizedBox(height: 20,),
             Center(
               child: ElevatedButton(
                 onPressed: (){
+                  Light? secondLight;
+                  if (_secondLight){
+                    final values = _lightController.text.split(';').map((e) => double.parse(e.trim())).toList();
+                    secondLight = Light(
+                      position: Point3D(values[0], values[1], values[2]),
+                      width: 1.0,
+                      height: 0.5,
+                      step: 0.03,
+                      color: Point3D(0.6, 0.6, 0.6),
+                    );
+                  }
                   context.read<MainCubit>().render(
-                    '$_reflectiveWall${_sphereReflective ? 1:0}${_cubeReflective ? 1:0}${_sphereTransparent ? 1:0}${_cubeTransparent ? 1:0}'
+                    '$_reflectiveWall'
+                    '${_sphereReflective ? 1:0}'
+                    '${_cubeReflective ? 1:0}'
+                    '${_sphereTransparent ? 1:0}'
+                    '${_cubeTransparent ? 1:0}'
+                    '${_softShadows ? 1:0}',
+                    secondLight
                   );
                 },
                 child: Text('Применить')

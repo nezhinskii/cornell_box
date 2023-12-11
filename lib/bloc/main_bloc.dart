@@ -39,7 +39,7 @@ class MainCubit extends Cubit<MainState> {
       width: 1.0,
       height: 0.5,
       step: 0.03,
-      color: Point3D(0.6, 0.6, 0.6),
+      color: Point3D(0.7, 0.7, 0.7),
     ),
   ];
 
@@ -49,6 +49,7 @@ class MainCubit extends Cubit<MainState> {
   Map<String, List<List<({Color color, Offset pos})?>>> _pixels = {};
   Matrix _view = Matrix.unit();
   Matrix _projection = Matrix.unit();
+  bool _softShadows = false;
   static const pixelRatio = 100;
 
   void _buildScene(String configuration){
@@ -97,7 +98,7 @@ class MainCubit extends Cubit<MainState> {
       Model(
         specularStrength: 0.0,
         reflectivity: configuration[0] == '3' ? 0.85 : 0.0,
-        color: Colors.white,
+        color: Colors.grey,
         points: [Point3D(-1.2, -1, 0), Point3D(1.2, -1, 0), Point3D(-1.2, -1, 5), Point3D(1.2, -1, 5)],
         polygonsByIndexes: [[0, 1, 2], [1, 3, 2]]
       ),
@@ -113,7 +114,7 @@ class MainCubit extends Cubit<MainState> {
       Model(
         specularStrength: 0.0,
         reflectivity: configuration[0] == '5' ? 0.85 : 0.0,
-        color: Colors.white,
+        color: Colors.grey,
         points: [Point3D(1.2, 1, 0), Point3D(-1.2, 1, 5), Point3D(1.2, 1, 5), Point3D(-1.2, 1, 0)],
         polygonsByIndexes: [[0, 1, 2], [0, 3, 1]]
       ),
@@ -121,18 +122,27 @@ class MainCubit extends Cubit<MainState> {
       Model(
         specularStrength: 0.0,
         reflectivity: configuration[0] == '6' ? 0.85 : 0.0,
-        color: Colors.white,
+        color: Colors.grey,
         points: [Point3D(1.2, 1, 0), Point3D(1.2, -1, 0), Point3D(-1.2, -1, 0), Point3D(-1.2, 1, 0)],
         polygonsByIndexes: [[0, 1, 2], [2, 3, 0]]
       ),
     ];
   }
 
-  void render(String configuration) async {
+  void render(String configuration, Light? secondLight) async {
     _view = Matrix.view(camera.eye, camera.target, camera.up);
     _projection = Matrix.cameraPerspective(camera.fov, width/height, camera.nearPlane, camera.farPlane);
 
-    if (_pixels.containsKey(configuration)){
+    if (configuration[5] == '1'){
+      _softShadows = true;
+    } else {
+      _softShadows = false;
+    }
+    if (secondLight != null){
+      lights.add(secondLight);
+    }
+
+    if (_pixels.containsKey(configuration) && configuration[5] == '1'){
       emit(CommonState(pixels: _pixels[configuration]!));
       return;
     } else {
@@ -145,26 +155,31 @@ class MainCubit extends Cubit<MainState> {
       final pixel = pixelRay.pixel;
       Point3D color = Point3D(0, 0, 0);
       int numSamples = 0;
+      Point3D? rayColor;
       for (var ray in pixelRay.rays){
-        final rayColor = _traceRay(ray, 5);
+        rayColor = _traceRay(ray, 7);
         if (rayColor != null){
           numSamples ++;
           color += rayColor;
         }
       }
       if (numSamples > 0){
-        _pixels[configuration]![pixel.dy.toInt()][pixel.dx.toInt()] = (
-        color: Color.fromRGBO(
-          color.x * 256 ~/ numSamples,
-          color.y * 256 ~/ numSamples,
-          color.z * 256 ~/ numSamples,
+        final resColor = Color.fromRGBO(
+          color.x * 255 ~/ numSamples,
+          color.y * 255 ~/ numSamples,
+          color.z * 255 ~/ numSamples,
           1.0
-        ),
-        pos: pixel
+        );
+        _pixels[configuration]![pixel.dy.toInt()][pixel.dx.toInt()] = (
+          color: resColor,
+          pos: pixel
         );
       }
     }
     emit(CommonState(pixels: _pixels[configuration]!));
+    if (secondLight != null){
+      lights.removeLast();
+    }
   }
 
   Point3D? _traceRay(Ray ray, int depth){
@@ -298,7 +313,11 @@ class MainCubit extends Cubit<MainState> {
       if (!inShadow){
         illuminationRatio = 1.0;
       } else {
-        illuminationRatio = _softShadow(_calcIlluminationRatio(light, intersection.hit));
+        if (_softShadows){
+          illuminationRatio = _softShadow(_calcIlluminationRatio(light, intersection.hit));
+        } else {
+          illuminationRatio = 0.15;
+        }
       }
       if (illuminationRatio > 1e-2) {
         Point3D lightDir = (intersection.hit - light.position).normalized();
@@ -315,10 +334,9 @@ class MainCubit extends Cubit<MainState> {
           color += light.color * object.specularStrength * spec * illuminationRatio;
         }
       }
-
-      //ambient
-      color += ambientLight;
     }
+    //ambient
+    color += ambientLight;
     return color..limitTop(1.0);
   }
 

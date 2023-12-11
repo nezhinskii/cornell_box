@@ -62,14 +62,13 @@ class Sphere implements Object{
       double t2 = (-b + sqrt(discriminant)) / (2 * a);
       double t = t1 < t2 && t1 >= 0 ? t1 : t2;
       final intersection = ray.start + ray.direction * t;
-      final projectedIntersection = Point3D.fromVector(Matrix.point(Point3D.fromVector(Matrix.point(intersection) * view)) * projection);
       final normal = (intersection - center).normalized();
       if (t >= 0) {
         return Intersection(
           inside: ray.direction.dot(normal) > 0,
           normal: normal,
           hit: intersection,
-          z: projectedIntersection.z
+          z: (intersection - ray.start).length()
         );
       } else {
         return null;

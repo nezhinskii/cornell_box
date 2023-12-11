@@ -78,19 +78,24 @@ class _MainPageState extends State<MainPage> {
                       builder: (context, constraints) {
                         context.read<MainCubit>().width = constraints.maxWidth.toInt();
                         context.read<MainCubit>().height = constraints.maxHeight.toInt();
-                        return ClipRRect(
-                          key: canvasAreaKey,
-                          child: CustomPaint(
-                            foregroundPainter: switch(state){
-                              CommonState() => AppPainter(
-                                pixels: state.pixels
+                        return GestureDetector(
+                          onPanDown: (details) {
+                            print(details);
+                          },
+                          child: ClipRRect(
+                            key: canvasAreaKey,
+                            child: CustomPaint(
+                              foregroundPainter: switch(state){
+                                CommonState() => AppPainter(
+                                  pixels: state.pixels
+                                ),
+                                _ => null
+                              },
+                              child: Container(
+                                color: Theme.of(context).colorScheme.background,
+                                width: double.infinity,
+                                height: double.infinity,
                               ),
-                              _ => null
-                            },
-                            child: Container(
-                              color: Theme.of(context).colorScheme.background,
-                              width: double.infinity,
-                              height: double.infinity,
                             ),
                           ),
                         );

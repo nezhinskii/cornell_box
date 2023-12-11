@@ -71,14 +71,14 @@ class Model implements IPoints, Object {
         continue;
       }
 
-      final projectedIntersection = Point3D.fromVector(Matrix.point(Point3D.fromVector(Matrix.point(res) * view)) * projection);
-      if (projectedIntersection.z < nearestZ){
-        nearestZ = projectedIntersection.z;
+      final z = (res - ray.start).length();
+      if (z < nearestZ){
+        nearestZ = z;
         nearestRes = Intersection(
           inside: ray.direction.dot(-polygon.normal) > 0,
           normal: -polygon.normal,
           hit: res,
-          z: projectedIntersection.z
+          z: z
         );
       }
     }
